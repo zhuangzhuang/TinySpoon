@@ -59,9 +59,38 @@ class APIRootView(APIView):
         return Response(data)
 
 class RecipeViewSet(viewsets.ModelViewSet):
-	queryset = Recipe.objects.all()
+    queryset = Recipe.objects.all()
 #	serializer_class_create = RecipeCreateSerializer
-	serializer_class = RecipeSerializer
+    serializer_class = RecipeSerializer
+
+    def retrieve(self, request):
+        #recipes = Recipe.objects.filter(tag__name=month)
+        recipes = Recipe.objects.all()
+        data = [ ]
+        for recipe in recipes:
+            tag_list = [ ]
+            material_list = [ ]
+            procedure_list = [ ]
+            items = {
+                    'tag': recipe.tag,
+                    'recipes': {
+                        'id': recipe.id,
+                        'name': recipe.name,
+                        'user': recipe.user,
+                        'exihibitpic': recipe.exihibitpic,
+                        'introduce': recipe.introduce,
+                        'tag': tag_list,
+                        'material': material_list,
+                        'procedure': procedure_list,
+                        },
+                    }
+            data.append(items)
+        context =  {
+            'status': status.HTTP_200_OK,
+            'data': data,
+            }
+        return Response(context, status=context.get('status'))
+
 
 class CategoryViewSet(viewsets.ModelViewSet):
 	queryset = Category.objects.all()
@@ -102,51 +131,57 @@ def tags(request):
 		})
 	return Response(data, status=status.HTTP_200_OK)
 
-@api_view(['GET'])
-@permission_classes([AllowAny])
-def recipes(request):
-        import pdb
-        pdb.set_trace()
-        data = []
-        tags = {}
-        recipes = Recipe.objects.all()
-	recipes = Paginator(recipes,10)
-	page = request.GET.get('page',1)
-	try:
-		recipes = recipes.page(page)
-	except PageNotAnInteger:
-		recipes = recipes.page(1)
-	except EmptyPage:
-		recipes = recipes.page(recipes.num_pages)
-        for recipe in recipes:
-                recipe_id = recipe.id
-                recipe_create_time = recipe.create_time
-                recipe_name = recipe.name
-                recipe_user = recipe.user
-                recipe_exihibitpic = recipe.exihibitpic
-                recipe_introduce = recipe.introduce	
-		tag_name = recipe.tag.filter(category__is_tag= 1 )[0].name
-		pdb.set_trace()
 
-                tag = None
-                if tag_name in tags:
-                        tag = tags[tag_name]
-                else:
-                        tag = {'tag':tag_name, 'recipes':[]}
-                        tags[tag_name] = tag
-                        data.append(tag)
-                tag['recipes'].append({
-                        'id':recipe_id,
-                        'create_time':recipe_create_time,
-                        'recipe':recipe_name,
-                        'user':recipe_user,
-                        'exihibitpic':recipe_exihibitpic.url,
-                        'introduce':recipe_introduce,	
-			'tag':recipe.tag.filter(category__is_tag= 1 )[0].name
-                })
-	pdb.set_trace()
 
-        return Response(data, status=status.HTTP_200_OK)
+
+
+
+
+#@api_view(['GET'])
+#@permission_classes([AllowAny])
+#def recipes(request):
+#        import pdb
+#        pdb.set_trace()
+#        data = []
+#        tags = {}
+#        recipes = Recipe.objects.all()
+#	recipes = Paginator(recipes,10)
+#	page = request.GET.get('page',1)
+#	try:
+#		recipes = recipes.page(page)
+#	except PageNotAnInteger:
+#		recipes = recipes.page(1)
+#	except EmptyPage:
+#		recipes = recipes.page(recipes.num_pages)
+#        for recipe in recipes:
+#                recipe_id = recipe.id
+#                recipe_create_time = recipe.create_time
+#                recipe_name = recipe.name
+#                recipe_user = recipe.user
+#                recipe_exihibitpic = recipe.exihibitpic
+#                recipe_introduce = recipe.introduce	
+#		tag_name = recipe.tag.filter(category__is_tag= 1 )[0].name
+#		pdb.set_trace()
+#
+#                tag = None
+#                if tag_name in tags:
+#                        tag = tags[tag_name]
+#                else:
+#                        tag = {'tag':tag_name, 'recipes':[]}
+#                        tags[tag_name] = tag
+#                        data.append(tag)
+#                tag['recipes'].append({
+#                        'id':recipe_id,
+#                        'create_time':recipe_create_time,
+#                        'recipe':recipe_name,
+#                        'user':recipe_user,
+#                        'exihibitpic':recipe_exihibitpic.url,
+#                        'introduce':recipe_introduce,	
+#			'tag':recipe.tag.filter(category__is_tag= 1 )[0].name
+#                })
+#	pdb.set_trace()
+#
+#        return Response(data, status=status.HTTP_200_OK)
 
 
 @api_view(['GET'])
