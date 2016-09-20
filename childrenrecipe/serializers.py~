@@ -37,19 +37,12 @@ class ProcedureSerializer(serializers.ModelSerializer):
                 model = Procedure
                 fields = ('url','id','recipe','seq','describe','image')
 
-class RecipeSerializer(serializers.ModelSerializer):
-	tag = TagSerializer(many=True)
-	material = MaterialSerializer(source='material_set',many=True)
-	procedure = ProcedureSerializer(source='procedure_set',many=True)
-
-	
-        class Meta:
-                model = Recipe
-                fields = ('url','id','name','user','exihibitpic','introduce','tag',
-<<<<<<< HEAD
-			'material','procedure'
-			)
-	
-=======
-			'material','procedure')
->>>>>>> a5708253a902ed3a374ea7402cd98bd9d0d2d3f2
+class RecipeSerializer(serializers.HyperlinkedModelSerializer):
+#	tag = TagSerializer(many=True)
+#	material = MaterialSerializer(source='material_set',many=True)
+#	procedure = ProcedureSerializer(source='procedure_set',many=True)
+#
+    recipes = serializers.HyperlinkedRelatedField(view_name='recipes', many=True)
+    class Meta:
+        model = Recipe
+        fields = ('url', 'id', 'create_time', 'name','user','exihibitpic','introduce','tag')

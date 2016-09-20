@@ -58,27 +58,57 @@ class APIRootView(APIView):
         }
         return Response(data)
 
-class RecipeViewSet(viewsets.ModelViewSet):
+class RecipeViewSet(viewsets.ViewSet):
     queryset = Recipe.objects.all()
-#	serializer_class_create = RecipeCreateSerializer
-    serializer_class = RecipeSerializer
+    serializer_class  = RecipeSerializer
 
-    def retrieve(self, request):
+    def list(self, request):
+        #queryset = Recipe.objects.all()
+        #serializer = RecipeSerializer(queryset, context={'request': request})	
+        recipes = Recipe.objects.values('id', 'create_time', 'name', 'user', 'exihibitpic',\
+                                         'introduce', 'tag__name', 'material__id',\
+                                         'material__name', 'material__quantity', 'material__measureunits',\
+                                         'procedure__id', 'procedure__seq', 'procedure__describe',\
+                                         'procedure__image', 'tag__category_id__name')
+        #serializer  = RecipeSerializer(queryset, many=True)
         #recipes = Recipe.objects.filter(tag__name=month)
-        recipes = Recipe.objects.all()
+        import pprint
+        pprint.pprint(recipes)
         data = [ ]
         for recipe in recipes:
+            import pprint
+            pprint.pprint(recipe)
             tag_list = [ ]
+            tag_list.append({
+                    'name': recipe['name'],
+                    'category_name': recipe['tag__category_id__name'],
+                    })
+
             material_list = [ ]
+            material_list.append({
+                    'id': recipe['material__id'],
+                    'recipe_title': recipe['name'],
+                    'name': recipe['material__name'],
+                    'quatity': recipe['material__quantity'],
+                    'measureunits': recipe['material__measureunits'],
+                    })
+
             procedure_list = [ ]
+            procedure_list.append({
+                    'id': recipe['procedure__id'],
+                    'recipe': recipe['name'],
+                    'seq': recipe['procedure__seq'],
+                    'describe': recipe['procedure__describe'],
+                    'image': recipe['procedure__image'],
+                    })
             items = {
-                    'tag': recipe.tag,
+                    'tag': recipe['tag__name'],
                     'recipes': {
-                        'id': recipe.id,
-                        'name': recipe.name,
-                        'user': recipe.user,
-                        'exihibitpic': recipe.exihibitpic,
-                        'introduce': recipe.introduce,
+                        'id': recipe['id'],
+                        'name': recipe['name'],
+                        'user': recipe['user'],
+                        'exihibitpic': recipe['exihibitpic'],
+                        'introduce': recipe['introduce'],
                         'tag': tag_list,
                         'material': material_list,
                         'procedure': procedure_list,
@@ -87,8 +117,10 @@ class RecipeViewSet(viewsets.ModelViewSet):
             data.append(items)
         context =  {
             'status': status.HTTP_200_OK,
+            'msg': 'OK',
             'data': data,
             }
+       # return Response(serializer.data)
         return Response(context, status=context.get('status'))
 
 
