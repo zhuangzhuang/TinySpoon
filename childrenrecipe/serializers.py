@@ -2,7 +2,6 @@ from django.contrib.auth.models import User, Group
 from rest_framework import serializers
 from .models import *
 from django.views.decorators.csrf import csrf_exempt
-import pdb
 
 class UserSerializer(serializers.HyperlinkedModelSerializer):
         class Meta:
@@ -23,26 +22,71 @@ class TagSerializer(serializers.HyperlinkedModelSerializer):
 	category_name = serializers.CharField(source='category.name')
 	class Meta:
 		model = Tag
-		fields = ('name','category_name')
+		fields = ('id','name','category_name')
 
 class MaterialSerializer(serializers.ModelSerializer):
         recipe_title = serializers.CharField(source='recipe.name')
         class Meta:
                 model = Material
-                fields = ('url','id','recipe_title','name','quantity','measureunits')   
+                fields = ('url','id','recipe_title','name','portion')   
 
-class ProcedureSerializer(serializers.ModelSerializer):
+
+class ProcedureSerializer(serializers.HyperlinkedModelSerializer):
         recipe = serializers.CharField(source='recipe.name')
+        width = serializers.SerializerMethodField(read_only=True)
+        height = serializers.SerializerMethodField(read_only=True)
+	
         class Meta:
                 model = Procedure
-                fields = ('url','id','recipe','seq','describe','image')
+                fields = ('url','id','recipe','seq','describe','image','width','height')
+
+	def get_width(self, obj):
+		if hasattr(obj, 'image') and hasattr(obj.image, 'image'):
+			return obj.image.image.width
+		return 0
+
+	def get_height(self, obj):
+		if hasattr(obj, 'image') and hasattr(obj.image, 'image'):
+			return obj.image.image.height
+		return 0
 
 class RecipeSerializer(serializers.HyperlinkedModelSerializer):
-#	tag = TagSerializer(many=True)
-#	material = MaterialSerializer(source='material_set',many=True)
-#	procedure = ProcedureSerializer(source='procedure_set',many=True)
-#
-    #recipes = serializers.HyperlinkedRelatedField(view_name='recipes', many=True)
+    tag = TagSerializer(many=True, required=False)
+    material = MaterialSerializer(source='material_set',many=True)
+    procedure = ProcedureSerializer(source='procedure_set',many=True)
+    width = serializers.SerializerMethodField(read_only=True)
+    height = serializers.SerializerMethodField(read_only=True)
+   # share_url = serializers.SerializerMethodField()
+
+
+
     class Meta:
         model = Recipe
-        fields = ('url', 'id', 'create_time', 'name','user','exihibitpic','introduce','tag')
+        fields = ('id','name','user','exihibitpic','introduce','tag','tips', 'create_time',
+                'material','procedure','width','height'
+                )
+        extra_kwargs = {
+                'url': {'view_name': 'recipe', 'many':True},
+                'tag': {'lookup_field': 'name'}
+                }
+
+    def get_width(self, obj):
+        if hasattr(obj, 'exihibitpic'):
+                return obj.exihibitpic.width
+        return 0
+
+    def get_height(self, obj):
+        if hasattr(obj, 'exihibitpic'):
+                return obj.exihibitpic.height
+        return 0
+
+	def get_share_url(self,obj):
+		return ''
+
+#class RecipeSerializer(serializers.ModelSerializer):
+#
+#    class Meta:
+#        model = Recipe
+#        fields = ('url','id','name','user','exihibitpic','introduce','tag','tips',
+#                )
+#
