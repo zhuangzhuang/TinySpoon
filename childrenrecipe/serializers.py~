@@ -62,7 +62,7 @@ class RecipeSerializer(serializers.HyperlinkedModelSerializer):
 
     class Meta:
         model = Recipe
-        fields = ('id','name','user','exihibitpic','introduce','tag','tips', 'create_time',
+        fields = ('id','name','user','exihibitpic','introduce','tag','tips',
                 'material','procedure','width','height'
                 )
         extra_kwargs = {

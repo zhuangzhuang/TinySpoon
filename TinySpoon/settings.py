@@ -87,9 +87,15 @@ DATABASES = {
         'ENGINE': 'django.db.backends.mysql',
         'NAME': 'TinySpoon',
         'USER': 'root',
+<<<<<<< HEAD
         'PASSWORD': os.getenv('DBPASSWD'),
         'HOST': os.getenv('DBHOST'),
         'PORT': '3306',
+=======
+        'PASSWORD': 'mysql',
+        'HOST': 'localhost',
+        'PORT': '3308',
+>>>>>>> f401ae96d88ef84f6ca2e6346f1e04306c713ea9
     }
 }
 

@@ -1,1 +1,15 @@
+<<<<<<< HEAD
+*.pyc
+*.swp
+*.py~
+childrenrecipe/*.swp
+childrenrecipe/.models.py.swp
+childrenrecipe/.views.py.swp
+childrenrecipe/serializers.py~ childrenrecipe/urls.py~ childrenrecipe/views.py~
+childrenrecipe/views.py.swp
+childrenrecipe/models.py.swp
+childrenrecipe/urls.py~
+childrenrecipe/serializers.py~
+=======
 images/
+>>>>>>> 9f969ba3e1ac1036c655f0a724ba9e89a5ad7650
