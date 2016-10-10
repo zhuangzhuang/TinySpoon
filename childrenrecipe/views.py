@@ -226,9 +226,27 @@ def recipe(request):
         search = None
         create_time = None
 	tags_ = None
+        print 'request.data:======'
+        print request.data
         search = request.data.get('search',None)
         create_time = request.data.get('create_time', None)
 	tags_ = request.data.get('tag_id',None)
+        
+        ## 我添加的
+        print 'tags_:======', tags_
+        for tag_detail in tags_:
+
+            #判断得到的tag 是否表示年龄,是就去查询补钙相关的菜谱信息
+            if tag_detail == 1:
+                tag_info = Tag.objects.get(id=tag_detail)
+                recipe_info = tag_info.recipe_set.filter(tag__id=tag_detail)
+                import pprint
+                pprint.pprint(recipe_info)
+            else:
+                pass
+                
+
+
 	if tags_ is None:
         	tags = Tag.objects.filter(category__is_tag=1).order_by('seq')
 	else:
@@ -279,8 +297,6 @@ def recipe(request):
 			})
                          
                         data.sort(key=lambda x : x['tag_id'])
-                        import pprint
-                        pprint.pprint(data)
 	return Response(data, status=status.HTTP_200_OK)
 	
 @api_view(['GET'])
