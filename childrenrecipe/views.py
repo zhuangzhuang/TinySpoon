@@ -277,6 +277,10 @@ def recipe(request):
                                'introduce':recipe_introduce,
                                'tag': [{"category_name": x.category.name, 'name': x.name}for x in recipe.tag.filter(category__is_tag = 4)]
 			})
+                         
+                        data.sort(key=lambda x : x['tag_id'])
+                        import pprint
+                        pprint.pprint(data)
 	return Response(data, status=status.HTTP_200_OK)
 	
 @api_view(['GET'])
