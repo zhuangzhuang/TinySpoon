@@ -234,17 +234,18 @@ def recipe(request):
         
         ## 我添加的
         print 'tags_:======', tags_
-        for tag_detail in tags_:
+        for tag_id_detail in tags_:
 
             #判断得到的tag 是否表示年龄,是就去查询补钙相关的菜谱信息
-            if tag_detail == 1:
-                tag_info = Tag.objects.get(id=tag_detail)
-                recipe_info = tag_info.recipe_set.filter(tag__id=tag_detail)
+                recipe_detail = Tag.objects\
+                        .filter(id=tag_id_detail, category__is_tag=1)\
+                        .values('recipe__id', 'recipe__create_time', 'recipe__name',\
+                                'recipe__user', 'recipe__exihibitpic', 'recipe__introduce',\
+                                'recipe__tips', 'recipe__tag')
                 import pprint
-                pprint.pprint(recipe_info)
-            else:
-                pass
-                
+                pprint.pprint(recipe_detail)
+
+            
 
 
 	if tags_ is None:
