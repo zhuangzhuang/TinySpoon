@@ -170,50 +170,48 @@ def recipe(request):
     tags_ = request.data.get('tag_id', None)
     host = request.META['HTTP_HOST']
 
-    query_tag = Tag.objects
     if tags_ is None:
-        query_tag = query_tag.filter(category__is_tag=1)
+        query = Recipe.objects
     else:
-        query_tag = query_tag.filter(id__in=tags_)
+        query = Recipe.objects
+        for tag_id in tags_:
+            query = query.filter(tag=tag_id)  # tag and query
 
-    tags = query_tag.order_by('seq')
-    for _ in tags:
-        query = _.recipe_set
-        if search:
-            query = query.filter(name__contains=search)
-        if create_time:
-            createtime = time.localtime(int(create_time))
-            s = time.strftime('%Y-%m-%d %H:%M:%S', createtime)
-            query = query.filter(create_time__gt=s)
-        recipes = query.order_by('create_time')[:10]
+    if search:
+        query = query.filter(name__contains=search)
+    if create_time:
+        createtime = time.localtime(int(create_time))
+        s = time.strftime('%Y-%m-%d %H:%M:%S', createtime)
+        query = query.filter(create_time__gt=s)
+    recipes = query.order_by('create_time')[:10]
 
-        for recipe in recipes:
-            recipe_create_time = recipe.create_time
+    for recipe in recipes:
+        recipe_create_time = recipe.create_time
 
-            td = recipe_create_time - EPOCH
-            timestamp_recipe_createtime = int(td.microseconds + (td.seconds + td.days * 24 * 3600))
+        td = recipe_create_time - EPOCH
+        timestamp_recipe_createtime = int(td.microseconds + (td.seconds + td.days * 24 * 3600))
 
-            query_tag = recipe.tag.filter(category__is_tag=1)
-            tag_first = query_tag[0]
+        query_tag = recipe.tag.filter(category__is_tag=1)
+        tag_first = query_tag[0]
 
-            tag_name = tag_first.name
-            tag_id = tag_first.id
-            tag_seq = tag_first.seq
+        tag_name = tag_first.name
+        tag_id = tag_first.id
+        tag_seq = tag_first.seq
 
-            if tag_name in ta:
-                tag = ta[tag_name]
-            else:
-                tag = {'tag': tag_name, 'tag_id': tag_id, 'tag_seq': tag_seq, 'recipes': []}
-                ta[tag_name] = tag
-                data.append(tag)
+        if tag_name in ta:
+            tag = ta[tag_name]
+        else:
+            tag = {'tag': tag_name, 'tag_id': tag_id, 'tag_seq': tag_seq, 'recipes': []}
+            ta[tag_name] = tag
+            data.append(tag)
 
-            _tags = [{"category_name": x.category.name, 'name': x.name}
-                        for x in recipe.tag.filter(category__is_tag=4)]
-            recipe_item = RecipeResponseItem(recipe=recipe,
-                                             host=host,
-                                             create_time=timestamp_recipe_createtime,
-                                             tags=_tags)
-            tag['recipes'].append(recipe_item.to_data())
+        _tags = [{"category_name": x.category.name, 'name': x.name}
+                    for x in recipe.tag.filter(category__is_tag=4)]
+        recipe_item = RecipeResponseItem(recipe=recipe,
+                                         host=host,
+                                         create_time=timestamp_recipe_createtime,
+                                         tags=_tags)
+        tag['recipes'].append(recipe_item.to_data())
     data.sort(key=lambda x: x['tag_seq'])
     return Response(data, status=status.HTTP_200_OK)
 
