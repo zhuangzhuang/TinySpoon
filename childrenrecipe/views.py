@@ -4,6 +4,7 @@ import time
 from datetime import datetime
 
 from django.core.urlresolvers import reverse
+from django.db.models import Q
 from django.views.decorators.csrf import csrf_exempt
 from django.core.paginator import Paginator, EmptyPage, PageNotAnInteger
 from django.http import HttpResponse
@@ -143,7 +144,7 @@ class RecipeResponseItem:
         host = self.host
         url = 'http://%s/api/recipes/%d' % (host, _id)
         exihibitpic_url = recipe.exihibitpic
-        exihibitpic = 'http://%s/%s' % (host, exihibitpic_url)
+        exihibitpic = 'http://%s/images/%s' % (host, exihibitpic_url)
         exihibitpic = exihibitpic.decode('utf-8')
         data = {
             'id': _id,
@@ -159,59 +160,134 @@ class RecipeResponseItem:
         return data
 
 
+class AgeTagManage:
+    '''
+    管理年龄tag
+    '''
+    def __init__(self):
+        tag_query = Tag.objects.filter(category__is_tag=1)
+        tags = tag_query.values_list('id', flat=True).all()
+        self.tag_age_ids = set(tags)
+
+    def check_age_query(self, tags):
+        check_id = set(tags) & self.tag_age_ids
+        return check_id
+
+    def rest_age_tags(self, tag):
+        return self.tag_age_ids - tag
+
+
+class AgeQuery:
+    def __init__(self, query, age_tag_id):
+        self.query = query
+        self.age_tag_id = age_tag_id
+
+
+class RecipeDuplicationManager:
+    '''
+    删选结果
+    '''
+    def __init__(self, remove):
+        self.remove = remove
+        self.recipes = set()
+
+    def check(self, recipe):
+        if not self.remove:
+            return False
+        if recipe in self.recipes:
+            return True
+        self.recipes.add(recipe)
+        return False
+
+
 @api_view(['POST'])
 @permission_classes([AllowAny])
 @csrf_exempt
 def recipe(request):
+    '''
+    search: 删选Recipe中name
+    create_time: 删选Recipe中create_time
+    tag_id: [] 删选tag
+        注意:
+            tag_id中有年龄的时候(category__is_tag=1)不会对重复结果删选
+            tag_id中没有年龄的时候 会对结果删选
+    '''
     data = []
-    ta = {}
     search = request.data.get('search', None)
     create_time = request.data.get('create_time', None)
-    tags_ = request.data.get('tag_id', None)
+    tags_ = request.data.get('tag_id', [])
     host = request.META['HTTP_HOST']
 
-    if tags_ is None:
-        query = Recipe.objects
-    else:
-        query = Recipe.objects
-        for tag_id in tags_:
-            query = query.filter(tag=tag_id)  # tag and query
+    age_tag_manager = AgeTagManage()
+    age_tag_id = age_tag_manager.check_age_query(tags_)
 
-    if search:
-        query = query.filter(name__contains=search)
+    rest_query_tags = tags_
+
+    if age_tag_id:
+        query = Recipe.objects
+        assert len(age_tag_id) == 1 #only one age id
+        age_tag_id_ls = list(age_tag_id)
+        age_id = age_tag_id_ls[0]
+        query = query.filter(tag=age_tag_id_ls[0]) #age filter
+        rest_query_tags = set(tags_) - age_tag_id
+        querys = [AgeQuery(query, age_id)]
+    else:
+        querys = []
+        for _age_tag_id in age_tag_manager.tag_age_ids: # 对所有年龄
+            query = Recipe.objects
+            query = query.filter(tag=_age_tag_id)
+            querys.append(AgeQuery(query, _age_tag_id))
+
+    # cache
+    q = Q()
+    for tag_id in rest_query_tags:
+        q = q | Q(tag=tag_id)
+    s = None
     if create_time:
         createtime = time.localtime(int(create_time))
         s = time.strftime('%Y-%m-%d %H:%M:%S', createtime)
-        query = query.filter(create_time__gt=s)
-    recipes = query.order_by('create_time')[:10]
 
-    for recipe in recipes:
-        recipe_create_time = recipe.create_time
+    #有age参数的时候不删选结果
+    remove = not age_tag_id
+    recipe_duplication_manager = RecipeDuplicationManager(remove=remove)
 
-        td = recipe_create_time - EPOCH
-        timestamp_recipe_createtime = int(td.microseconds + (td.seconds + td.days * 24 * 3600))
+    for age_query in querys:
+        query = age_query.query
+        age_tag_id = age_query.age_tag_id
+        query = query.filter(q)  # tag and query
+        if search:
+            query = query.filter(name__contains=search)
+        if s:
+            query = query.filter(create_time__gt=s)
+        recipes = query.order_by('create_time')[:10]
 
-        query_tag = recipe.tag.filter(category__is_tag=1)
+        query_tag = Tag.objects.filter(id=age_tag_id)
         tag_first = query_tag[0]
-
         tag_name = tag_first.name
         tag_id = tag_first.id
         tag_seq = tag_first.seq
 
-        if tag_name in ta:
-            tag = ta[tag_name]
-        else:
-            tag = {'tag': tag_name, 'tag_id': tag_id, 'tag_seq': tag_seq, 'recipes': []}
-            ta[tag_name] = tag
-            data.append(tag)
+        tag = {'tag': tag_name, 'tag_id': tag_id, 'tag_seq': tag_seq, 'recipes': []}
+        _recipes = []
+        for recipe in recipes:
+            if recipe_duplication_manager.check(recipe):
+                continue
 
-        _tags = [{"category_name": x.category.name, 'name': x.name}
-                    for x in recipe.tag.filter(category__is_tag=4)]
-        recipe_item = RecipeResponseItem(recipe=recipe,
-                                         host=host,
-                                         create_time=timestamp_recipe_createtime,
-                                         tags=_tags)
-        tag['recipes'].append(recipe_item.to_data())
+            recipe_create_time = recipe.create_time
+
+            td = recipe_create_time - EPOCH
+            timestamp_recipe_createtime = int(td.microseconds + (td.seconds + td.days * 24 * 3600))
+
+            _tags = [{"category_name": x.category.name, 'name': x.name}
+                        for x in recipe.tag.filter(category__is_tag=4)]
+            recipe_item = RecipeResponseItem(recipe=recipe,
+                                             host=host,
+                                             create_time=timestamp_recipe_createtime,
+                                             tags=_tags)
+            _recipes.append(recipe_item.to_data())
+        if recipes:
+            tag['recipes'] = _recipes
+            data.append(tag)
     data.sort(key=lambda x: x['tag_seq'])
     return Response(data, status=status.HTTP_200_OK)
 
