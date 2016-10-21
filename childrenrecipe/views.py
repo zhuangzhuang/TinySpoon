@@ -280,7 +280,7 @@ def recipe(request):
                                              create_time=timestamp_recipe_createtime,
                                              tags=_tags)
             _recipes.append(recipe_item.to_data())
-        if recipes:
+        if _recipes:
             tag['recipes'] = _recipes
             data.append(tag)
     data.sort(key=lambda x: x['tag_seq'])
