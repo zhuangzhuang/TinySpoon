@@ -187,13 +187,10 @@ class RecipeDuplicationManager:
     '''
     删选结果
     '''
-    def __init__(self, remove):
-        self.remove = remove
+    def __init__(self):
         self.recipes = set()
 
     def check(self, recipe):
-        if not self.remove:
-            return False
         if recipe in self.recipes:
             return True
         self.recipes.add(recipe)
@@ -209,8 +206,8 @@ def recipe(request):
     create_time: 删选Recipe中create_time
     tag_id: [] 删选tag
         注意:
-            tag_id中有年龄的时候(category__is_tag=1)不会对重复结果删选
-            tag_id中没有年龄的时候 会对结果删选
+            tag_id中有年龄的时候(category__is_tag=1) 都会对结果重复删选
+            tag_id中没有年龄的时候
     '''
     data = []
     search = request.data.get('search', None)
@@ -247,9 +244,7 @@ def recipe(request):
         createtime = time.localtime(int(create_time))
         s = time.strftime('%Y-%m-%d %H:%M:%S', createtime)
 
-    #有age参数的时候不删选结果
-    remove = not age_tag_id
-    recipe_duplication_manager = RecipeDuplicationManager(remove=remove)
+    recipe_duplication_manager = RecipeDuplicationManager()
 
     for age_query in querys:
         query = age_query.query
