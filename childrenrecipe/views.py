@@ -190,11 +190,8 @@ class RecipeDuplicationManager:
     def __init__(self):
         self.recipes = set()
 
-    def check(self, recipe):
-        if recipe in self.recipes:
-            return True
-        self.recipes.add(recipe)
-        return False
+    def add(self, recipe):
+        self.recipes.add(recipe.id)
 
 
 @api_view(['POST'])
@@ -202,12 +199,7 @@ class RecipeDuplicationManager:
 @csrf_exempt
 def recipe(request):
     '''
-    search: 删选Recipe中name
-    create_time: 删选Recipe中create_time
-    tag_id: [] 删选tag
-        注意:
-            tag_id中有年龄的时候(category__is_tag=1) 都会对结果重复删选
-            tag_id中没有年龄的时候
+    参见: doc/api/: /api/recipe
     '''
     data = []
     search = request.data.get('search', None)
@@ -220,6 +212,8 @@ def recipe(request):
 
     rest_query_tags = tags_
 
+    filter_dump_recipe = False
+
     if age_tag_id:
         query = Recipe.objects
         assert len(age_tag_id) == 1 #only one age id
@@ -227,6 +221,7 @@ def recipe(request):
         age_id = age_tag_id_ls[0]
         query = query.filter(tag=age_tag_id_ls[0]) #age filter
         rest_query_tags = set(tags_) - age_tag_id
+        filter_dump_recipe = bool(rest_query_tags) # 有查询别的就过滤
         querys = [AgeQuery(query, age_id)]
     else:
         querys = []
@@ -254,6 +249,9 @@ def recipe(request):
             query = query.filter(name__contains=search)
         if s:
             query = query.filter(create_time__gt=s)
+        if filter_dump_recipe:
+            query = query.exclude(id__in=list(recipe_duplication_manager.recipes))
+
         recipes = query.order_by('create_time')[:10]
 
         query_tag = Tag.objects.filter(id=age_tag_id)
@@ -265,9 +263,7 @@ def recipe(request):
         tag = {'tag': tag_name, 'tag_id': tag_id, 'tag_seq': tag_seq, 'recipes': []}
         _recipes = []
         for recipe in recipes:
-            if recipe_duplication_manager.check(recipe):
-                continue
-
+            recipe_duplication_manager.add(recipe)
             recipe_create_time = recipe.create_time
 
             td = recipe_create_time - EPOCH
