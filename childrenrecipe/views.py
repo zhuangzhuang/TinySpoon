@@ -212,7 +212,7 @@ def recipe(request):
 
     rest_query_tags = tags_
 
-    filter_dump_recipe = False
+    filter_dump_recipe = bool(tags_) #有查询就过滤
 
     if age_tag_id:
         query = Recipe.objects
@@ -221,7 +221,6 @@ def recipe(request):
         age_id = age_tag_id_ls[0]
         query = query.filter(tag=age_tag_id_ls[0]) #age filter
         rest_query_tags = set(tags_) - age_tag_id
-        filter_dump_recipe = bool(rest_query_tags) # 有查询别的就过滤
         querys = [AgeQuery(query, age_id)]
     else:
         querys = []
