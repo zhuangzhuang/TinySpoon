@@ -248,10 +248,11 @@ def recipe(request):
             query = query.filter(name__contains=search)
         if s:
             query = query.filter(create_time__gt=s)
-        if filter_dump_recipe:
-            query = query.exclude(id__in=list(recipe_duplication_manager.recipes))
+        filter_recipes = list(recipe_duplication_manager.recipes)
+        if filter_dump_recipe and filter_recipes:
+            query = query.exclude(id__in=filter_recipes)
 
-        recipes = query.order_by('create_time')[:10]
+        recipes = query.order_by('create_time').distinct()[:10]
 
         query_tag = Tag.objects.filter(id=age_tag_id)
         tag_first = query_tag[0]
